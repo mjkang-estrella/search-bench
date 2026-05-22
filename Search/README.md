@@ -7,6 +7,7 @@ search results contain enough evidence to answer the benchmark question.
 ## Current Run
 
 - `results/search_evals_simpleqa20/simpleqa20_20260522/`
+- `results/frames20/frames20_20260522/`
 
 Primary files:
 
@@ -22,6 +23,7 @@ Primary files:
 
 ```bash
 python3 Search/benchmark.py --limit 20 --max-results 10 --run-id simpleqa20_YYYYMMDD
+python3 Search/benchmark.py --benchmark frames --limit 20 --max-results 10 --run-id frames20_YYYYMMDD
 python3 Search/openai_judge.py \
   --run-dir Search/results/search_evals_simpleqa20/simpleqa20_YYYYMMDD \
   --input Search/results/search_evals_simpleqa20/simpleqa20_YYYYMMDD/normalized/results.jsonl \

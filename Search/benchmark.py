@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Raw Search API benchmark harness.
 
-Runs a 20-question SimpleQA slice in the style used by search_evals, but keeps
-the tested provider surface to raw search results only: no provider-generated
-answers, no provider LLM summaries.
+Runs small evidence-retrieval slices against raw search results only: no
+provider-generated answers, no provider LLM summaries.
 """
 
 from __future__ import annotations
@@ -28,6 +27,12 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT.parent / "Quick Answer" / "data"
+SEARCH_DATA_DIR = ROOT / "data"
+FRAMES_TSV = "https://huggingface.co/datasets/google/frames-benchmark/resolve/main/test.tsv"
+SEALQA_ROWS_URL = (
+    "https://datasets-server.huggingface.co/rows?"
+    "dataset=vtllms%2Fsealqa&config=seal_0&split=test&offset=0&length={limit}"
+)
 USER_AGENT = "liner-search-benchmark/0.1"
 SMOKE_QUERY = "Who received the IEEE Frank Rosenblatt Award in 2010?"
 
@@ -141,7 +146,23 @@ def request_json(
         raise BenchmarkError(f"Non-JSON response from {url}: {exc}") from exc
 
 
-def load_questions(limit: int) -> list[Question]:
+def download_text(url: str) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=90) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
+def load_questions(benchmark: str, limit: int) -> list[Question]:
+    if benchmark == "simpleqa":
+        return load_simpleqa_questions(limit)
+    if benchmark == "frames":
+        return load_frames_questions(limit)
+    if benchmark == "sealqa":
+        return load_sealqa_questions(limit)
+    raise BenchmarkError(f"Unknown benchmark {benchmark}")
+
+
+def load_simpleqa_questions(limit: int) -> list[Question]:
     path = DATA_DIR / "simpleqa.csv"
     if not path.exists():
         raise BenchmarkError(f"Missing SimpleQA data at {path}")
@@ -170,6 +191,96 @@ def load_questions(limit: int) -> list[Question]:
     return questions
 
 
+def load_frames_questions(limit: int) -> list[Question]:
+    mkdir(SEARCH_DATA_DIR)
+    path = SEARCH_DATA_DIR / "frames_test.tsv"
+    if not path.exists():
+        path.write_text(download_text(FRAMES_TSV), encoding="utf-8")
+    rows = list(csv.DictReader(path.read_text(encoding="utf-8-sig").splitlines(), delimiter="\t"))
+    questions: list[Question] = []
+    for idx, row in enumerate(rows):
+        query = row.get("Prompt", "").strip()
+        answer = row.get("Answer", "").strip()
+        gold_urls = frames_gold_urls(row)
+        if not query:
+            continue
+        questions.append(
+            Question(
+                benchmark="frames",
+                query_id=f"frames_{idx + 1:04d}",
+                query=query,
+                reference_answer=answer,
+                gold_urls=gold_urls,
+                category=row.get("reasoning_types", "").strip(),
+            )
+        )
+        if len(questions) >= limit:
+            break
+    if not questions:
+        raise BenchmarkError("No FRAMES questions loaded")
+    return questions
+
+
+def frames_gold_urls(row: dict[str, str]) -> list[str]:
+    urls: list[str] = []
+    for key, value in row.items():
+        if key.startswith("wikipedia_link_") and value.strip():
+            urls.append(value.strip())
+    metadata_urls = parse_metadata(row.get("wiki_links", "")).get("urls", [])
+    for url in metadata_urls:
+        if isinstance(url, str) and url.strip():
+            urls.append(url.strip())
+    if row.get("wiki_links", "").strip().startswith("["):
+        try:
+            parsed = ast.literal_eval(row["wiki_links"])
+        except Exception:
+            parsed = []
+        if isinstance(parsed, list):
+            urls.extend(str(url).strip() for url in parsed if str(url).strip())
+    return list(dict.fromkeys(urls))
+
+
+def load_sealqa_questions(limit: int) -> list[Question]:
+    mkdir(SEARCH_DATA_DIR)
+    path = SEARCH_DATA_DIR / f"sealqa_seal_0_{limit}.json"
+    if not path.exists():
+        path.write_text(download_text(SEALQA_ROWS_URL.format(limit=limit)), encoding="utf-8")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("rows", [])
+    questions: list[Question] = []
+    for item in rows:
+        if not isinstance(item, dict) or not isinstance(item.get("row"), dict):
+            continue
+        row = item["row"]
+        query = str(row.get("question", "")).strip()
+        answer = str(row.get("answer", "")).strip()
+        urls = [str(url).strip() for url in row.get("urls", []) if str(url).strip()]
+        topic = str(row.get("topic", "")).strip()
+        freshness = str(row.get("freshness", "")).strip()
+        question_types = row.get("question_types", [])
+        if isinstance(question_types, list):
+            type_text = ", ".join(str(value) for value in question_types)
+        else:
+            type_text = str(question_types)
+        if not query:
+            continue
+        questions.append(
+            Question(
+                benchmark="sealqa",
+                query_id=f"sealqa_{int(item.get('row_idx', len(questions))) + 1:04d}",
+                query=query,
+                reference_answer=answer,
+                gold_urls=urls,
+                category=" | ".join(part for part in [topic, freshness, type_text] if part),
+            )
+        )
+        if len(questions) >= limit:
+            break
+    if not questions:
+        raise BenchmarkError("No SealQA questions loaded")
+    return questions
+
+
 def parse_metadata(text: str) -> dict[str, Any]:
     try:
         value = ast.literal_eval(text)
@@ -195,8 +306,6 @@ def call_provider(provider: Provider, env: dict[str, str], question: Question, m
     else:
         raise BenchmarkError(f"Unknown provider {provider.key}")
     results = normalize_results(provider.key, raw)
-    if not results:
-        raise BenchmarkError(f"{provider.product} returned no parseable search results")
     return {
         "provider": provider.key,
         "product": provider.product,
@@ -257,7 +366,7 @@ def call_brave(api_key: str, query: str, max_results: int) -> tuple[dict[str, An
         "https://api.search.brave.com/res/v1/web/search",
         method="GET",
         headers={"X-Subscription-Token": api_key},
-        params={"q": query, "count": max_results, "text_decorations": "false", "result_filter": "web"},
+        params={"q": limit_words(query, 50), "count": max_results, "text_decorations": "false", "result_filter": "web"},
     )
 
 
@@ -331,6 +440,13 @@ def first_text(item: dict[str, Any], keys: list[str]) -> str:
 def compact_text(text: str, limit: int) -> str:
     text = re.sub(r"\s+", " ", str(text)).strip()
     return text[:limit]
+
+
+def limit_words(text: str, max_words: int) -> str:
+    words = re.findall(r"\S+", text)
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[:max_words])
 
 
 def hostname(url: str) -> str:
@@ -480,7 +596,7 @@ def write_report(run_dir: Path, smoke: list[dict[str, Any]], records: list[dict[
         "## Executive Summary",
         "",
         f"- Run ID: `{run_dir.name}`",
-        f"- Benchmark: `search_evals`-style SimpleQA evidence retrieval slice.",
+        f"- Benchmark: `{benchmark_label(args.benchmark)}` evidence retrieval slice.",
         f"- Scope: {args.limit} questions x {len(PROVIDERS)} providers = {len(records)} benchmark calls.",
         f"- Result depth: top {args.max_results}.",
         "- Provider-generated answers and summaries were disabled where the API exposes that control.",
@@ -565,6 +681,16 @@ def provider_order() -> list[str]:
     return [provider.key for provider in PROVIDERS]
 
 
+def benchmark_label(benchmark: str) -> str:
+    if benchmark == "simpleqa":
+        return "search_evals-style SimpleQA"
+    if benchmark == "frames":
+        return "FRAMES"
+    if benchmark == "sealqa":
+        return "SealQA Seal-0"
+    return benchmark
+
+
 def group_by(records: list[dict[str, Any]], key: str) -> dict[str, list[dict[str, Any]]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for record in records:
@@ -582,6 +708,7 @@ def pct(values: list[float], percentile: int) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run raw Search API benchmarks.")
+    parser.add_argument("--benchmark", choices=["simpleqa", "frames", "sealqa"], default="simpleqa")
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--max-results", type=int, default=10)
     parser.add_argument("--run-id", default=now_run_id())
@@ -593,14 +720,20 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    run_dir = ROOT / "results" / "search_evals_simpleqa20" / args.run_id
+    suites = {
+        "simpleqa": "search_evals_simpleqa20",
+        "frames": "frames20",
+        "sealqa": "sealqa20",
+    }
+    suite = suites[args.benchmark]
+    run_dir = ROOT / "results" / suite / args.run_id
     mkdir(run_dir / "normalized")
     records: list[dict[str, Any]] = []
     try:
         env = load_env(env_path())
         smoke = read_jsonl(run_dir / "normalized" / "smoke_results.jsonl") if args.reuse_smoke else run_smoke(env, run_dir, args.max_results)
         if not args.smoke_only:
-            questions = load_questions(args.limit)
+            questions = load_questions(args.benchmark, args.limit)
             records = run_benchmark(env, run_dir, questions, args.max_results, args.resume)
         write_report(run_dir, smoke, records, args)
     except BenchmarkError as exc:
