@@ -1,0 +1,536 @@
+data/
+results/
+scripts/
+frames20/
+sealqa20/
+search_evals_simpleqa20/
+frames20_20260522/
+smoke_frames/
+charts/
+normalized/
+raw/
+frames/
+smoke/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+normalized/
+raw/
+smoke/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+sealqa20_20260522/
+smoke_sealqa/
+charts/
+normalized/
+raw/
+sealqa/
+smoke/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+normalized/
+raw/
+smoke/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+simpleqa20_20260522/
+smoke_check/
+charts/
+normalized/
+raw/
+search_evals_simpleqa/
+smoke/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+normalized/
+raw/
+smoke/
+brave/
+exa/
+liner/
+parallel/
+perplexity/
+tavily/
+README.md  1.8K
+benchmark.py  27.7K
+openai_judge.py  11.5K
+benchmark.cpython-314.pyc  49.6K
+openai_judge.cpython-314.pyc  20.0K
+frames_test.tsv  473.5K
+sealqa_seal_0_20.json  11.0K
+blocking_report.md  1.3K
+frames20_search_openai_judge_report.md  1.3K
+report.md  11.5K
+latency_vs_answerability.html  3.4K
+latency_vs_answerability.png  100.4K
+latency_vs_answerability.svg  3.3K
+price_vs_answerability.html  3.4K
+price_vs_answerability.png  100.4K
+price_vs_answerability.svg  3.3K
+openai_judge_results.jsonl  32.9K
+results.jsonl  999.1K
+smoke_results.jsonl  45.0K
+frames_0001.json  28.5K
+frames_0002.json  33.3K
+frames_0003.json  44.9K
+frames_0004.json  37.0K
+frames_0005.json  33.9K
+frames_0006.json  29.0K
+frames_0007.json  32.2K
+frames_0008.json  34.1K
+frames_0009.json  31.9K
+frames_0010.json  29.7K
+frames_0011.json  28.5K
+frames_0012.json  36.6K
+frames_0013.json  24.3K
+frames_0014.json  52.0K
+frames_0015.json  30.4K
+frames_0016.json  30.0K
+frames_0017.json  37.7K
+frames_0018.json  35.4K
+frames_0019.json  29.6K
+frames_0020.json  44.0K
+frames_0001.json  21.9K
+frames_0002.json  29.0K
+frames_0003.json  17.9K
+frames_0004.json  23.8K
+frames_0005.json  17.6K
+frames_0006.json  14.4K
+frames_0007.json  17.0K
+frames_0008.json  25.5K
+frames_0009.json  23.8K
+frames_0010.json  28.0K
+frames_0011.json  20.6K
+frames_0012.json  21.2K
+frames_0013.json  15.1K
+frames_0014.json  31.0K
+frames_0015.json  20.6K
+frames_0016.json  21.2K
+frames_0017.json  28.1K
+frames_0018.json  25.6K
+frames_0019.json  26.4K
+frames_0020.json  24.9K
+frames_0001.json  5.4K
+frames_0002.json  5.2K
+frames_0003.json  4.9K
+frames_0004.json  4.6K
+frames_0005.json  4.8K
+frames_0006.json  4.9K
+frames_0007.json  5.2K
+frames_0008.json  4.9K
+frames_0009.json  5.3K
+frames_0010.json  4.7K
+frames_0011.json  5.0K
+frames_0012.json  5.1K
+frames_0013.json  5.2K
+frames_0014.json  4.9K
+frames_0015.json  5.1K
+frames_0016.json  4.8K
+frames_0017.json  5.2K
+frames_0018.json  5.2K
+frames_0019.json  5.1K
+frames_0020.json  4.8K
+frames_0001.json  11.9K
+frames_0002.json  11.1K
+frames_0003.json  12.4K
+frames_0004.json  12.1K
+frames_0005.json  10.9K
+frames_0006.json  11.9K
+frames_0007.json  12.0K
+frames_0008.json  11.6K
+frames_0009.json  12.9K
+frames_0010.json  12.1K
+frames_0011.json  12.1K
+frames_0012.json  11.5K
+frames_0013.json  10.5K
+frames_0014.json  10.7K
+frames_0015.json  10.1K
+frames_0016.json  10.4K
+frames_0017.json  11.6K
+frames_0018.json  10.8K
+frames_0019.json  10.5K
+frames_0020.json  10.4K
+frames_0001.json  7.2K
+frames_0002.json  8.3K
+frames_0003.json  5.4K
+frames_0004.json  4.4K
+frames_0005.json  5.6K
+frames_0006.json  14.8K
+frames_0007.json  6.7K
+frames_0008.json  4.6K
+frames_0009.json  7.6K
+frames_0010.json  5.2K
+frames_0011.json  4.0K
+frames_0012.json  6.3K
+frames_0013.json  4.4K
+frames_0014.json  6.6K
+frames_0015.json  5.6K
+frames_0016.json  6.0K
+frames_0017.json  9.9K
+frames_0018.json  3.8K
+frames_0019.json  5.6K
+frames_0020.json  4.2K
+frames_0001.json  8.4K
+frames_0002.json  10.6K
+frames_0003.json  9.1K
+frames_0004.json  19.0K
+frames_0005.json  12.4K
+frames_0006.json  10.7K
+frames_0007.json  23.6K
+frames_0008.json  8.7K
+frames_0009.json  6.7K
+frames_0010.json  4.4K
+frames_0011.json  10.4K
+frames_0012.json  4.9K
+frames_0013.json  5.3K
+frames_0014.json  10.9K
+frames_0015.json  9.3K
+frames_0016.json  10.1K
+frames_0017.json  10.8K
+frames_0018.json  10.2K
+frames_0019.json  4.4K
+frames_0020.json  4.8K
+smoke_0001.json  26.5K
+smoke_0001.json  17.6K
+smoke_0001.json  4.6K
+smoke_0001.json  11.2K
+smoke_0001.json  4.5K
+smoke_0001.json  10.9K
+report.md  2.2K
+smoke_results.jsonl  44.6K
+smoke_0001.json  26.5K
+smoke_0001.json  17.6K
+smoke_0001.json  4.6K
+smoke_0001.json  10.8K
+smoke_0001.json  4.5K
+smoke_0001.json  10.9K
+blocking_report.md  251B
+report.md  11.5K
+sealqa20_search_openai_judge_report.md  1.3K
+latency_vs_answerability.html  3.4K
+latency_vs_answerability.png  99.7K
+latency_vs_answerability.svg  3.3K
+price_vs_answerability.html  3.4K
+price_vs_answerability.png  99.8K
+price_vs_answerability.svg  3.3K
+openai_judge_results.jsonl  32.9K
+results.jsonl  1.0M
+smoke_results.jsonl  43.9K
+sealqa_0001.json  52.1K
+sealqa_0002.json  45.2K
+sealqa_0003.json  41.5K
+sealqa_0004.json  38.9K
+sealqa_0005.json  37.8K
+sealqa_0006.json  33.3K
+sealqa_0007.json  28.5K
+sealqa_0008.json  37.2K
+sealqa_0009.json  38.6K
+sealqa_0010.json  35.5K
+sealqa_0011.json  48.0K
+sealqa_0012.json  41.4K
+sealqa_0013.json  50.8K
+sealqa_0014.json  43.3K
+sealqa_0015.json  44.7K
+sealqa_0016.json  35.7K
+sealqa_0017.json  43.1K
+sealqa_0018.json  52.0K
+sealqa_0019.json  49.6K
+sealqa_0020.json  33.1K
+sealqa_0001.json  15.4K
+sealqa_0002.json  22.2K
+sealqa_0003.json  19.2K
+sealqa_0004.json  27.1K
+sealqa_0005.json  14.4K
+sealqa_0006.json  20.5K
+sealqa_0007.json  15.7K
+sealqa_0008.json  26.0K
+sealqa_0009.json  22.3K
+sealqa_0010.json  25.4K
+sealqa_0011.json  24.0K
+sealqa_0012.json  25.1K
+sealqa_0013.json  35.6K
+sealqa_0014.json  35.5K
+sealqa_0015.json  22.6K
+sealqa_0016.json  31.4K
+sealqa_0017.json  19.6K
+sealqa_0018.json  16.4K
+sealqa_0019.json  32.3K
+sealqa_0020.json  34.8K
+sealqa_0001.json  5.0K
+sealqa_0002.json  4.9K
+sealqa_0003.json  4.7K
+sealqa_0004.json  5.1K
+sealqa_0005.json  4.7K
+sealqa_0006.json  4.7K
+sealqa_0007.json  4.6K
+sealqa_0008.json  5.0K
+sealqa_0009.json  4.5K
+sealqa_0010.json  4.8K
+sealqa_0011.json  5.0K
+sealqa_0012.json  4.8K
+sealqa_0013.json  5.1K
+sealqa_0014.json  4.7K
+sealqa_0015.json  4.6K
+sealqa_0016.json  4.8K
+sealqa_0017.json  4.8K
+sealqa_0018.json  4.7K
+sealqa_0019.json  4.9K
+sealqa_0020.json  4.8K
+sealqa_0001.json  13.7K
+sealqa_0002.json  8.7K
+sealqa_0003.json  11.2K
+sealqa_0004.json  10.9K
+sealqa_0005.json  11.7K
+sealqa_0006.json  10.5K
+sealqa_0007.json  11.1K
+sealqa_0008.json  12.5K
+sealqa_0009.json  11.3K
+sealqa_0010.json  10.7K
+sealqa_0011.json  11.2K
+sealqa_0012.json  12.5K
+sealqa_0013.json  11.9K
+sealqa_0014.json  10.7K
+sealqa_0015.json  10.8K
+sealqa_0016.json  12.2K
+sealqa_0017.json  9.7K
+sealqa_0018.json  10.0K
+sealqa_0019.json  10.8K
+sealqa_0020.json  11.2K
+sealqa_0001.json  7.5K
+sealqa_0002.json  10.5K
+sealqa_0003.json  15.6K
+sealqa_0004.json  5.4K
+sealqa_0005.json  5.0K
+sealqa_0006.json  5.2K
+sealqa_0007.json  6.8K
+sealqa_0008.json  8.5K
+sealqa_0009.json  15.2K
+sealqa_0010.json  7.9K
+sealqa_0011.json  5.9K
+sealqa_0012.json  6.9K
+sealqa_0013.json  10.4K
+sealqa_0014.json  15.5K
+sealqa_0015.json  6.4K
+sealqa_0016.json  3.9K
+sealqa_0017.json  6.5K
+sealqa_0018.json  8.9K
+sealqa_0019.json  8.7K
+sealqa_0020.json  11.1K
+sealqa_0001.json  15.9K
+sealqa_0002.json  9.7K
+sealqa_0003.json  4.8K
+sealqa_0004.json  4.8K
+sealqa_0005.json  15.9K
+sealqa_0006.json  10.5K
+sealqa_0007.json  4.5K
+sealqa_0008.json  4.9K
+sealqa_0009.json  18.1K
+sealqa_0010.json  7.3K
+sealqa_0011.json  10.0K
+sealqa_0012.json  10.2K
+sealqa_0013.json  9.5K
+sealqa_0014.json  9.7K
+sealqa_0015.json  9.5K
+sealqa_0016.json  7.8K
+sealqa_0017.json  7.8K
+sealqa_0018.json  12.3K
+sealqa_0019.json  13.3K
+sealqa_0020.json  4.7K
+smoke_0001.json  26.5K
+smoke_0001.json  19.9K
+smoke_0001.json  4.6K
+smoke_0001.json  9.1K
+smoke_0001.json  4.5K
+smoke_0001.json  10.8K
+report.md  2.2K
+smoke_results.jsonl  45.3K
+smoke_0001.json  26.5K
+smoke_0001.json  19.9K
+smoke_0001.json  4.6K
+smoke_0001.json  10.4K
+smoke_0001.json  4.5K
+smoke_0001.json  10.8K
+report.md  15.5K
+simpleqa20_search_openai_judge_report.md  1.3K
+latency_vs_answerability.html  3.4K
+latency_vs_answerability.png  101.2K
+latency_vs_answerability.svg  3.3K
+price_vs_answerability.html  3.4K
+price_vs_answerability.png  100.4K
+price_vs_answerability.svg  3.3K
+openai_judge_results.jsonl  31.3K
+results.jsonl  974.9K
+smoke_results.jsonl  44.2K
+simpleqa_0001.json  26.8K
+simpleqa_0002.json  29.5K
+simpleqa_0003.json  44.7K
+simpleqa_0004.json  48.0K
+simpleqa_0005.json  27.9K
+simpleqa_0006.json  34.4K
+simpleqa_0007.json  42.1K
+simpleqa_0008.json  44.8K
+simpleqa_0009.json  44.9K
+simpleqa_0010.json  42.0K
+simpleqa_0011.json  30.8K
+simpleqa_0012.json  21.3K
+simpleqa_0013.json  25.7K
+simpleqa_0014.json  39.2K
+simpleqa_0015.json  32.4K
+simpleqa_0016.json  39.8K
+simpleqa_0017.json  34.2K
+simpleqa_0018.json  25.1K
+simpleqa_0019.json  47.6K
+simpleqa_0020.json  43.5K
+simpleqa_0001.json  17.9K
+simpleqa_0002.json  19.1K
+simpleqa_0003.json  22.4K
+simpleqa_0004.json  17.3K
+simpleqa_0005.json  22.5K
+simpleqa_0006.json  16.2K
+simpleqa_0007.json  19.2K
+simpleqa_0008.json  18.9K
+simpleqa_0009.json  18.3K
+simpleqa_0010.json  19.9K
+simpleqa_0011.json  18.1K
+simpleqa_0012.json  11.2K
+simpleqa_0013.json  14.4K
+simpleqa_0014.json  20.0K
+simpleqa_0015.json  33.0K
+simpleqa_0016.json  12.4K
+simpleqa_0017.json  17.0K
+simpleqa_0018.json  21.3K
+simpleqa_0019.json  14.8K
+simpleqa_0020.json  13.9K
+simpleqa_0001.json  4.9K
+simpleqa_0002.json  4.8K
+simpleqa_0003.json  4.6K
+simpleqa_0004.json  4.7K
+simpleqa_0005.json  5.2K
+simpleqa_0006.json  5.3K
+simpleqa_0007.json  5.0K
+simpleqa_0008.json  4.7K
+simpleqa_0009.json  5.2K
+simpleqa_0010.json  5.3K
+simpleqa_0011.json  4.9K
+simpleqa_0012.json  4.5K
+simpleqa_0013.json  4.8K
+simpleqa_0014.json  5.5K
+simpleqa_0015.json  5.4K
+simpleqa_0016.json  5.0K
+simpleqa_0017.json  4.9K
+simpleqa_0018.json  4.9K
+simpleqa_0019.json  4.9K
+simpleqa_0020.json  4.8K
+simpleqa_0001.json  11.8K
+simpleqa_0002.json  10.8K
+simpleqa_0003.json  8.7K
+simpleqa_0004.json  8.8K
+simpleqa_0005.json  11.5K
+simpleqa_0006.json  10.7K
+simpleqa_0007.json  12.8K
+simpleqa_0008.json  12.1K
+simpleqa_0009.json  12.0K
+simpleqa_0010.json  11.6K
+simpleqa_0011.json  9.5K
+simpleqa_0012.json  9.2K
+simpleqa_0013.json  10.1K
+simpleqa_0014.json  10.5K
+simpleqa_0015.json  12.7K
+simpleqa_0016.json  9.8K
+simpleqa_0017.json  12.4K
+simpleqa_0018.json  11.3K
+simpleqa_0019.json  11.4K
+simpleqa_0020.json  9.7K
+simpleqa_0001.json  4.4K
+simpleqa_0002.json  5.4K
+simpleqa_0003.json  6.2K
+simpleqa_0004.json  6.6K
+simpleqa_0005.json  10.6K
+simpleqa_0006.json  6.6K
+simpleqa_0007.json  6.1K
+simpleqa_0008.json  8.5K
+simpleqa_0009.json  6.8K
+simpleqa_0010.json  9.1K
+simpleqa_0011.json  5.2K
+simpleqa_0012.json  8.8K
+simpleqa_0013.json  3.6K
+simpleqa_0014.json  6.6K
+simpleqa_0015.json  5.5K
+simpleqa_0016.json  10.4K
+simpleqa_0017.json  6.5K
+simpleqa_0018.json  5.4K
+simpleqa_0019.json  8.0K
+simpleqa_0020.json  4.0K
+simpleqa_0001.json  11.1K
+simpleqa_0002.json  9.7K
+simpleqa_0003.json  10.3K
+simpleqa_0004.json  15.8K
+simpleqa_0005.json  11.1K
+simpleqa_0006.json  8.8K
+simpleqa_0007.json  5.0K
+simpleqa_0008.json  15.2K
+simpleqa_0009.json  12.1K
+simpleqa_0010.json  13.4K
+simpleqa_0011.json  6.6K
+simpleqa_0012.json  13.0K
+simpleqa_0013.json  9.2K
+simpleqa_0014.json  10.9K
+simpleqa_0015.json  14.2K
+simpleqa_0016.json  11.4K
+simpleqa_0017.json  9.4K
+simpleqa_0018.json  6.7K
+simpleqa_0019.json  8.9K
+simpleqa_0020.json  10.7K
+smoke_0001.json  26.5K
+smoke_0001.json  17.6K
+smoke_0001.json  4.6K
+smoke_0001.json  10.3K
+smoke_0001.json  4.5K
+smoke_0001.json  10.9K
+report.md  2.2K
+smoke_results.jsonl  44.4K
+smoke_0001.json  26.5K
+smoke_0001.json  17.6K
+smoke_0001.json  4.6K
+smoke_0001.json  10.5K
+smoke_0001.json  4.5K
+smoke_0001.json  10.9K
+generate_charts.py  5.8K
+generate_charts.cpython-314.pyc  11.2K

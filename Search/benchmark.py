@@ -13,6 +13,7 @@ import csv
 import datetime as dt
 import json
 import os
+import random
 import re
 import statistics
 import sys
@@ -33,6 +34,7 @@ SEALQA_ROWS_URL = (
     "https://datasets-server.huggingface.co/rows?"
     "dataset=vtllms%2Fsealqa&config=seal_0&split=test&offset=0&length={limit}"
 )
+HF_ROWS_URL = "https://datasets-server.huggingface.co/rows?dataset={dataset}&config={config}&split={split}&offset={offset}&length={length}"
 USER_AGENT = "liner-search-benchmark/0.1"
 SMOKE_QUERY = "Who received the IEEE Frank Rosenblatt Award in 2010?"
 
@@ -49,6 +51,7 @@ class Question:
     reference_answer: str
     gold_urls: list[str]
     category: str
+    gold_domain_urls: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -76,7 +79,7 @@ def env_path() -> Path:
     return ROOT.parent / ".env"
 
 
-def load_env(path: Path) -> dict[str, str]:
+def load_env(path: Path, providers: list[Provider]) -> dict[str, str]:
     env = dict(os.environ)
     if not path.exists():
         raise BenchmarkError(f"Missing .env at {path}")
@@ -86,7 +89,7 @@ def load_env(path: Path) -> dict[str, str]:
             continue
         key, value = stripped.split("=", 1)
         env[key.strip()] = value.strip().strip('"').strip("'")
-    missing = [provider.env_var for provider in PROVIDERS if not env.get(provider.env_var)]
+    missing = [provider.env_var for provider in providers if not env.get(provider.env_var)]
     if missing:
         raise BenchmarkError("Missing required environment variables: " + ", ".join(missing))
     return env
@@ -152,17 +155,19 @@ def download_text(url: str) -> str:
         return resp.read().decode("utf-8", errors="replace")
 
 
-def load_questions(benchmark: str, limit: int) -> list[Question]:
+def load_questions(benchmark: str, limit: int | None) -> list[Question]:
     if benchmark == "simpleqa":
         return load_simpleqa_questions(limit)
     if benchmark == "frames":
         return load_frames_questions(limit)
     if benchmark == "sealqa":
         return load_sealqa_questions(limit)
+    if benchmark == "webwalkerqa":
+        return load_webwalkerqa_questions(limit)
     raise BenchmarkError(f"Unknown benchmark {benchmark}")
 
 
-def load_simpleqa_questions(limit: int) -> list[Question]:
+def load_simpleqa_questions(limit: int | None) -> list[Question]:
     path = DATA_DIR / "simpleqa.csv"
     if not path.exists():
         raise BenchmarkError(f"Missing SimpleQA data at {path}")
@@ -184,14 +189,14 @@ def load_simpleqa_questions(limit: int) -> list[Question]:
                 category=str(metadata.get("topic", "")),
             )
         )
-        if len(questions) >= limit:
+        if limit is not None and len(questions) >= limit:
             break
     if not questions:
         raise BenchmarkError("No benchmark questions loaded")
     return questions
 
 
-def load_frames_questions(limit: int) -> list[Question]:
+def load_frames_questions(limit: int | None) -> list[Question]:
     mkdir(SEARCH_DATA_DIR)
     path = SEARCH_DATA_DIR / "frames_test.tsv"
     if not path.exists():
@@ -214,7 +219,7 @@ def load_frames_questions(limit: int) -> list[Question]:
                 category=row.get("reasoning_types", "").strip(),
             )
         )
-        if len(questions) >= limit:
+        if limit is not None and len(questions) >= limit:
             break
     if not questions:
         raise BenchmarkError("No FRAMES questions loaded")
@@ -240,11 +245,12 @@ def frames_gold_urls(row: dict[str, str]) -> list[str]:
     return list(dict.fromkeys(urls))
 
 
-def load_sealqa_questions(limit: int) -> list[Question]:
+def load_sealqa_questions(limit: int | None) -> list[Question]:
     mkdir(SEARCH_DATA_DIR)
-    path = SEARCH_DATA_DIR / f"sealqa_seal_0_{limit}.json"
+    fetch_limit = limit or 1000
+    path = SEARCH_DATA_DIR / f"sealqa_seal_0_{fetch_limit}.json"
     if not path.exists():
-        path.write_text(download_text(SEALQA_ROWS_URL.format(limit=limit)), encoding="utf-8")
+        path.write_text(json.dumps({"rows": fetch_hf_rows("vtllms/sealqa", "seal_0", "test", fetch_limit)}, ensure_ascii=False), encoding="utf-8")
     payload = json.loads(path.read_text(encoding="utf-8"))
     rows = payload.get("rows", [])
     questions: list[Question] = []
@@ -274,11 +280,84 @@ def load_sealqa_questions(limit: int) -> list[Question]:
                 category=" | ".join(part for part in [topic, freshness, type_text] if part),
             )
         )
-        if len(questions) >= limit:
+        if limit is not None and len(questions) >= limit:
             break
     if not questions:
         raise BenchmarkError("No SealQA questions loaded")
     return questions
+
+
+def load_webwalkerqa_questions(limit: int | None) -> list[Question]:
+    mkdir(SEARCH_DATA_DIR)
+    fetch_limit = limit or 1000
+    path = SEARCH_DATA_DIR / f"webwalkerqa_en_{fetch_limit}.json"
+    if not path.exists():
+        rows = fetch_hf_rows("callanwu/WebWalkerQA", "default", "main", fetch_limit, lang_filter="en")
+        path.write_text(json.dumps({"rows": rows}, ensure_ascii=False), encoding="utf-8")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    questions: list[Question] = []
+    for item in payload.get("rows", []):
+        if not isinstance(item, dict) or not isinstance(item.get("row"), dict):
+            continue
+        row = item["row"]
+        info = row.get("info") if isinstance(row.get("info"), dict) else {}
+        query = str(row.get("question", "")).strip()
+        answer = str(row.get("answer", "")).strip()
+        source_urls = [str(url).strip() for url in info.get("source_website", []) if str(url).strip()]
+        root_url = str(row.get("root_url", "")).strip()
+        if not query or not source_urls:
+            continue
+        questions.append(
+            Question(
+                benchmark="webwalkerqa",
+                query_id=f"webwalkerqa_{int(item.get('row_idx', len(questions))) + 1:04d}",
+                query=query,
+                reference_answer=answer,
+                gold_urls=source_urls,
+                gold_domain_urls=[root_url] if root_url else [],
+                category=" | ".join(
+                    part
+                    for part in [
+                        str(info.get("domain", "")).strip(),
+                        str(info.get("type", "")).strip(),
+                        str(info.get("difficulty_level", "")).strip(),
+                    ]
+                    if part
+                ),
+            )
+        )
+        if limit is not None and len(questions) >= limit:
+            break
+    if not questions:
+        raise BenchmarkError("No WebWalkerQA questions loaded")
+    return questions
+
+
+def fetch_hf_rows(dataset: str, config: str, split: str, desired_rows: int, *, lang_filter: str | None = None) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    page_size = 100
+    encoded_dataset = urllib.parse.quote(dataset, safe="")
+    while len(rows) < desired_rows:
+        url = HF_ROWS_URL.format(dataset=encoded_dataset, config=config, split=split, offset=offset, length=page_size)
+        payload = json.loads(download_text(url))
+        page = payload.get("rows", [])
+        if not page:
+            break
+        for item in page:
+            if lang_filter:
+                row = item.get("row", {}) if isinstance(item, dict) else {}
+                info = row.get("info", {}) if isinstance(row.get("info"), dict) else {}
+                if str(info.get("lang", "")).lower() != lang_filter.lower():
+                    continue
+            rows.append(item)
+            if len(rows) >= desired_rows:
+                break
+        offset += len(page)
+        total = int(payload.get("num_rows_total") or 0)
+        if total and offset >= total:
+            break
+    return rows
 
 
 def parse_metadata(text: str) -> dict[str, Any]:
@@ -314,6 +393,7 @@ def call_provider(provider: Provider, env: dict[str, str], question: Question, m
         "query": question.query,
         "reference_answer": question.reference_answer,
         "gold_urls": question.gold_urls,
+        "gold_domain_urls": question.gold_domain_urls or [],
         "category": question.category,
         "results": results[:max_results],
         "timing": timing,
@@ -463,14 +543,14 @@ def canonical_url(url: str) -> str:
     return f"{host}{path}".lower()
 
 
-def gold_hit(results: list[dict[str, Any]], gold_urls: list[str]) -> dict[str, Any]:
+def gold_hit(results: list[dict[str, Any]], gold_urls: list[str], gold_domain_urls: list[str] | None = None) -> dict[str, Any]:
     gold = [canonical_url(url) for url in gold_urls]
     for result in results:
         result_url = canonical_url(result.get("url", ""))
         for target in gold:
             if target and (result_url == target or result_url.startswith(target) or target.startswith(result_url)):
                 return {"hit": True, "rank": result["rank"], "url": result.get("url", "")}
-    gold_hosts = {hostname(url) for url in gold_urls if hostname(url)}
+    gold_hosts = {hostname(url) for url in [*gold_urls, *(gold_domain_urls or [])] if hostname(url)}
     for result in results:
         if result.get("hostname") in gold_hosts:
             return {"hit": True, "rank": result["rank"], "url": result.get("url", ""), "domain_only": True}
@@ -507,6 +587,7 @@ def write_raw(run_dir: Path, record: dict[str, Any]) -> None:
         "query": record["query"],
         "reference_answer": record["reference_answer"],
         "gold_urls": record["gold_urls"],
+        "gold_domain_urls": record.get("gold_domain_urls", []),
         "timing": record["timing"],
         "raw": record["raw"],
     }
@@ -515,7 +596,7 @@ def write_raw(run_dir: Path, record: dict[str, Any]) -> None:
 
 
 def to_normalized_record(record: dict[str, Any]) -> dict[str, Any]:
-    hit = gold_hit(record["results"], record["gold_urls"])
+    hit = gold_hit(record["results"], record["gold_urls"], record.get("gold_domain_urls", []))
     return {
         "provider": record["provider"],
         "product": record["product"],
@@ -524,6 +605,7 @@ def to_normalized_record(record: dict[str, Any]) -> dict[str, Any]:
         "query": record["query"],
         "reference_answer": record["reference_answer"],
         "gold_urls": record["gold_urls"],
+        "gold_domain_urls": record.get("gold_domain_urls", []),
         "category": record["category"],
         "results": record["results"],
         "gold_hit": hit,
@@ -546,10 +628,10 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def run_smoke(env: dict[str, str], run_dir: Path, max_results: int) -> list[dict[str, Any]]:
+def run_smoke(env: dict[str, str], run_dir: Path, max_results: int, providers: list[Provider]) -> list[dict[str, Any]]:
     question = Question("smoke", "smoke_0001", SMOKE_QUERY, "Michio Sugeno", [], "smoke")
     rows = []
-    for provider in PROVIDERS:
+    for provider in providers:
         record = call_provider(provider, env, question, max_results)
         write_raw(run_dir, record)
         rows.append(to_normalized_record(record))
@@ -557,11 +639,11 @@ def run_smoke(env: dict[str, str], run_dir: Path, max_results: int) -> list[dict
     return rows
 
 
-def run_benchmark(env: dict[str, str], run_dir: Path, questions: list[Question], max_results: int, resume: bool) -> list[dict[str, Any]]:
+def run_benchmark(env: dict[str, str], run_dir: Path, questions: list[Question], max_results: int, resume: bool, providers: list[Provider]) -> list[dict[str, Any]]:
     records = read_jsonl(run_dir / "normalized" / "results.jsonl") if resume else []
     completed = {(row["provider"], row["query_id"]) for row in records if row.get("status") == "ok"}
     for question in questions:
-        for provider in PROVIDERS:
+        for provider in providers:
             if (provider.key, question.query_id) in completed:
                 continue
             record = call_provider(provider, env, question, max_results)
@@ -590,6 +672,7 @@ def write_blocking_report(run_dir: Path, exc: Exception, records: list[dict[str,
 
 def write_report(run_dir: Path, smoke: list[dict[str, Any]], records: list[dict[str, Any]], args: argparse.Namespace) -> None:
     by_provider = group_by(records, "provider")
+    providers = selected_providers(args.providers)
     lines = [
         "# Search API Benchmark Report",
         "",
@@ -597,7 +680,7 @@ def write_report(run_dir: Path, smoke: list[dict[str, Any]], records: list[dict[
         "",
         f"- Run ID: `{run_dir.name}`",
         f"- Benchmark: `{benchmark_label(args.benchmark)}` evidence retrieval slice.",
-        f"- Scope: {args.limit} questions x {len(PROVIDERS)} providers = {len(records)} benchmark calls.",
+        f"- Scope: {question_count_arg(args)} questions x {len(providers)} providers = {len(records)} benchmark calls.",
         f"- Result depth: top {args.max_results}.",
         "- Provider-generated answers and summaries were disabled where the API exposes that control.",
         "- Search quality scoring here is pre-judge only: gold URL/domain hit and result coverage. Use `openai_judge.py` for answerability scoring.",
@@ -607,7 +690,7 @@ def write_report(run_dir: Path, smoke: list[dict[str, Any]], records: list[dict[
         "| Provider | Product | Pricing basis |",
         "| --- | --- | --- |",
     ]
-    for provider in PROVIDERS:
+    for provider in providers:
         lines.append(f"| {provider.key} | {provider.product} | {provider.pricing_note} |")
     lines.extend([
         "",
@@ -681,6 +764,21 @@ def provider_order() -> list[str]:
     return [provider.key for provider in PROVIDERS]
 
 
+def selected_providers(provider_arg: str | None) -> list[Provider]:
+    if not provider_arg:
+        return PROVIDERS
+    requested = [item.strip() for item in provider_arg.split(",") if item.strip()]
+    known = {provider.key: provider for provider in PROVIDERS}
+    unknown = [key for key in requested if key not in known]
+    if unknown:
+        raise BenchmarkError("Unknown providers: " + ", ".join(unknown))
+    return [known[key] for key in requested]
+
+
+def question_count_arg(args: argparse.Namespace) -> int:
+    return args.sample_size if args.sample_size is not None else args.limit
+
+
 def benchmark_label(benchmark: str) -> str:
     if benchmark == "simpleqa":
         return "search_evals-style SimpleQA"
@@ -688,7 +786,41 @@ def benchmark_label(benchmark: str) -> str:
         return "FRAMES"
     if benchmark == "sealqa":
         return "SealQA Seal-0"
+    if benchmark == "webwalkerqa":
+        return "WebWalkerQA"
     return benchmark
+
+
+def sample_questions(questions: list[Question], sample_size: int | None, seed: int | None) -> list[Question]:
+    if sample_size is None:
+        return questions
+    if len(questions) < sample_size:
+        raise BenchmarkError(f"Cannot sample {sample_size} questions; only {len(questions)} available")
+    rng = random.Random(seed)
+    sampled = rng.sample(questions, sample_size)
+    return sorted(sampled, key=lambda question: question.query_id)
+
+
+def write_sample_manifest(run_dir: Path, benchmark: str, seed: int | None, source_count: int, sampled: list[Question]) -> None:
+    payload = {
+        "benchmark": benchmark,
+        "seed": seed,
+        "source_count": source_count,
+        "sample_size": len(sampled),
+        "query_ids": [question.query_id for question in sampled],
+        "questions": [
+            {
+                "query_id": question.query_id,
+                "query": question.query,
+                "reference_answer": question.reference_answer,
+                "gold_urls": question.gold_urls,
+                "gold_domain_urls": question.gold_domain_urls or [],
+                "category": question.category,
+            }
+            for question in sampled
+        ],
+    }
+    (run_dir / "sample_manifest.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def group_by(records: list[dict[str, Any]], key: str) -> dict[str, list[dict[str, Any]]]:
@@ -708,8 +840,11 @@ def pct(values: list[float], percentile: int) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run raw Search API benchmarks.")
-    parser.add_argument("--benchmark", choices=["simpleqa", "frames", "sealqa"], default="simpleqa")
+    parser.add_argument("--benchmark", choices=["simpleqa", "frames", "sealqa", "webwalkerqa"], default="simpleqa")
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--sample-size", type=int)
+    parser.add_argument("--seed", type=int, default=20260523)
+    parser.add_argument("--providers", default=None)
     parser.add_argument("--max-results", type=int, default=10)
     parser.add_argument("--run-id", default=now_run_id())
     parser.add_argument("--smoke-only", action="store_true")
@@ -724,17 +859,28 @@ def main() -> int:
         "simpleqa": "search_evals_simpleqa20",
         "frames": "frames20",
         "sealqa": "sealqa20",
+        "webwalkerqa": "webwalkerqa20",
     }
+    if args.sample_size == 100:
+        suites = {
+            "simpleqa": "search_evals_simpleqa100",
+            "frames": "frames100",
+            "sealqa": "sealqa100",
+            "webwalkerqa": "webwalkerqa100",
+        }
     suite = suites[args.benchmark]
     run_dir = ROOT / "results" / suite / args.run_id
     mkdir(run_dir / "normalized")
     records: list[dict[str, Any]] = []
     try:
-        env = load_env(env_path())
-        smoke = read_jsonl(run_dir / "normalized" / "smoke_results.jsonl") if args.reuse_smoke else run_smoke(env, run_dir, args.max_results)
+        providers = selected_providers(args.providers)
+        env = load_env(env_path(), providers)
+        smoke = read_jsonl(run_dir / "normalized" / "smoke_results.jsonl") if args.reuse_smoke else run_smoke(env, run_dir, args.max_results, providers)
         if not args.smoke_only:
-            questions = load_questions(args.benchmark, args.limit)
-            records = run_benchmark(env, run_dir, questions, args.max_results, args.resume)
+            source_questions = load_questions(args.benchmark, None if args.sample_size is not None else args.limit)
+            questions = sample_questions(source_questions, args.sample_size, args.seed)
+            write_sample_manifest(run_dir, args.benchmark, args.seed if args.sample_size is not None else None, len(source_questions), questions)
+            records = run_benchmark(env, run_dir, questions, args.max_results, args.resume, providers)
         write_report(run_dir, smoke, records, args)
     except BenchmarkError as exc:
         records = read_jsonl(run_dir / "normalized" / "results.jsonl")
